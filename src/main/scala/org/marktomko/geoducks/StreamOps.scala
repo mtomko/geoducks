@@ -6,7 +6,6 @@ import scala.collection.immutable.Queue
 
 object StreamOps {
 
-  // todo: generalize the step width
   // todo: pull request into Stream
   object stream {
 

@@ -1,6 +1,6 @@
 import libraries._
 
-lazy val root = project
+lazy val geoducks = project
   .in(file("."))
   .settings(
     inThisBuild(
@@ -15,6 +15,7 @@ lazy val root = project
       catsEffect,
       fs2Core,
       fs2Io,
-      scalaTest % Test
+      scalaCheck % Test,
+      scalaTest  % Test
     )
   )
