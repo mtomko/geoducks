@@ -4,8 +4,8 @@ object versions {
 
   val cats       = "1.0.0-RC1"
   val catsEffect = "0.5"
-  val fs2        = "0.10.0-M8"
-  val scalaCheck = "1.13.4"
+  val fs2        = "0.10.0-M9"
+  val scalaCheck = "1.13.5"
   val scalaTest  = "3.0.4"
 
 }

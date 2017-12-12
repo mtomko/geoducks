@@ -1,7 +1,7 @@
-package org.marktomko.geoducks
+package org.marktomko.geoducks.stream
 
 import fs2.Stream
-import org.marktomko.geoducks.StreamOps._
+import org.marktomko.geoducks.stream.StreamOps._
 import org.scalatest.{FlatSpec, Matchers}
 
 class StreamOpsTest extends FlatSpec with Matchers {
