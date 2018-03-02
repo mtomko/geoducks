@@ -7,8 +7,9 @@ import org.marktomko.geoducks.stream.StreamOps.pipe.grouped
 package object format {
 
   def fastq[F[_]]: Pipe[F, String, Fastq] = { in =>
-    grouped(4)(in).map { v =>
-      Fastq(v(0), v(1), v(3))
+    grouped(4)(in).map {
+      case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
+      case _ => throw new AssertionError("bug")
     }
   }
 

@@ -11,16 +11,17 @@ import org.marktomko.geoducks.format
 
 object GeoducksBench {
 
-  def nanoTimed(f: => Unit): Float = {
+  def nanoTimed[A](f: => A): (A, Float) = {
     val t0 = System.nanoTime()
-    f
+    val ret = f
     val t1 = System.nanoTime()
-    (t1 - t0).nanos.toUnit(TimeUnit.MILLISECONDS).toFloat
+    val dt = (t1 - t0).nanos.toUnit(TimeUnit.MILLISECONDS).toFloat
+    (ret, dt)
   }
 
   def main(args: Array[String]): Unit = {
     args.foreach { arg =>
-     println(nanoTimed(fastqSequences[IO](Paths.get(arg)).unsafeRunSync))
+      println(nanoTimed(countFastqReads[IO](Paths.get(arg)).unsafeRunSync))
     }
   }
 
@@ -35,6 +36,15 @@ object GeoducksBench {
       .through(io.file.writeAll(Paths.get(path.toString + ".txt")))
       .compile.drain
   }
+
+  def countFastqReads[F[_] : Sync](path: Path): F[Int] = {
+    io.file.readAll[F](path, 4096)
+      .through(text.utf8Decode)
+      .through(text.lines)
+      .through(format.fastq)
+      .compile.fold(0) { case (x, _) => x + 1 }
+  }
+
 
 }
 
