@@ -7,19 +7,6 @@ lazy val commonSettings = inThisBuild(
     version := "0.0.1-SNAPSHOT"
   ))
 
-
-lazy val assemblySettings = Seq(
-  assemblyJarName in assembly := "bin/geoducks.jar",
-  assemblyMergeStrategy in assembly := {
-    case "logback.xml" => MergeStrategy.first
-    case "logback-test.xml" => MergeStrategy.discard
-    case "sbt/sbt.autoplugins" => MergeStrategy.discard
-    case x =>
-      val old = (assemblyMergeStrategy in assembly).value
-      old(x)
-  }
-)
-
 lazy val geoducks = project
   .in(file("."))
   .settings(commonSettings: _*)
@@ -42,9 +29,9 @@ lazy val bench = project
   .in(file("bench"))
   .settings(name := "geoducks-bench")
   .settings(commonSettings: _*)
-  .settings(assemblySettings: _*)
   .dependsOn(core)
   .settings(
+    assemblyJarName := "geoducks-bench-bin.jar",
     libraryDependencies ++= Seq(
       catsCore,
       catsEffect,
