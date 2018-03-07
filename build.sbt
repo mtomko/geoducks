@@ -22,6 +22,7 @@ lazy val core = project
       catsEffect,
       fs2Core,
       fs2Io,
+      univocity,
       scalaCheck % Test,
       scalaTest  % Test))
 
@@ -37,6 +38,7 @@ lazy val bench = project
       catsEffect,
       fs2Core,
       fs2Io,
+      monix,
       scalaCheck % Test,
       scalaTest  % Test))
 
