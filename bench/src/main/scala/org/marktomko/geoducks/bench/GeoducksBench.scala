@@ -1,9 +1,8 @@
 package org.marktomko.geoducks.bench.GeoducksBench
 
-import java.io.{ BufferedReader, FileReader }
+import java.io.{BufferedReader, FileReader}
 import java.nio.file.{Path, Paths}
 import java.util.concurrent.TimeUnit
-import org.marktomko.geoducks.domain.Fastq
 
 import scala.concurrent.duration._
 import scala.concurrent.Await
@@ -12,8 +11,10 @@ import cats.effect.{IO, Sync}
 import fs2.{io, text, Stream}
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
+import org.marktomko.geoducks.domain.Fastq
 import org.marktomko.geoducks.format
 import org.marktomko.geoducks.stream.pipe
+
 
 object GeoducksBench {
 
@@ -41,13 +42,13 @@ object GeoducksBench {
 
   @inline
   final def withMonix(arg: String): (Int, Float) = {
-    val task = fastqStreamTask(Paths.get(arg)).compile.fold(0) { case (x, _) => x + 1 }
+    val task = countFastqReads2[Task](Paths.get(arg))
     nanoTimed(Await.result(task.runAsync, Duration.Inf))
   }
 
   @inline
   final def withIO(arg: String): (Int, Float) = {
-    val io = fastqStreamIo(Paths.get(arg)).compile.fold(0) { case (x, _) => x + 1 }
+    val io = countFastqReads2[IO](Paths.get(arg))
     nanoTimed(io.unsafeRunSync())
   }
 
@@ -63,27 +64,23 @@ object GeoducksBench {
       .compile.drain
   }
 
-  final def countFastqReads[F[_] : Sync](path: Path): F[Int] = 
+  final def countFastqReads[F[_] : Sync](path: Path): F[Int] =
     io.file.readAll[F](path, 16384)
       .through(text.utf8Decode)
       .through(text.lines)
       .through(pipe.grouped(4))
       .compile.fold(0) { case (x, _) => x + 1 }
 
-  final def fastqStreamIo(path: Path): Stream[IO, Fastq] = {
-    Stream.bracket(IO(new BufferedReader(new FileReader(path.toFile))))(
-      rdr => format.fastqStream(rdr).covary[IO],
-      rdr => IO(rdr.close())
-    )
+  final def countFastqReads2[F[_] : Sync](path: Path): F[Int] =
+    fastqStream[F](path).compile.fold(0) { case (x, _) => x + 1 }
+
+  final def fastqStream[F[_] : Sync](path: Path): Stream[F, Fastq] =
+    bracketedReader(path).flatMap(format.fastqStream(_))
+
+  final def bracketedReader[F[_] : Sync](path: Path): Stream[F, BufferedReader] = {
+    Stream.bracket(Sync[F].delay(new BufferedReader(new FileReader(path.toFile))))(
+      rdr => Stream.emit(rdr),
+      rdr => Sync[F].delay(rdr.close()))
   }
- 
- final def fastqStreamTask(path: Path): Stream[Task, Fastq] = {
-    Stream.bracket(Task.eval(new BufferedReader(new FileReader(path.toFile))))(
-      rdr => format.fastqStream(rdr).covary[Task],
-      rdr => Task.eval(rdr.close())
-    )
-  }
- 
 
 }
-
