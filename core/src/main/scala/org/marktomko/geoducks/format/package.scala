@@ -27,7 +27,7 @@ package object format {
     }
   }
 
-  final def toStream[Record](parser: CsvParser) = 
+  final def csvStream[Record](parser: CsvParser) =
     Stream.unfold(parser) { p =>
       Option(p.parseNextRecord()).map((_, p)) }
 
