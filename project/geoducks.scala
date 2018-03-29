@@ -2,13 +2,12 @@ import sbt._
 
 object versions {
 
-  val cats       = "1.0.1"
-  val catsEffect = "0.8"
-  val fs2        = "0.10.2"
+  val cats       = "1.1.0"
+  val catsEffect = "0.10"
+  val fs2        = "0.10.3"
   val monix      = "3.0.0-M3"
   val scalaCheck = "1.13.5"
   val scalaTest  = "3.0.5"
-  val univocity  = "2.6.0"
 
 }
 
@@ -20,5 +19,4 @@ object libraries {
   lazy val monix      = "io.monix"       %% "monix"             % versions.monix
   lazy val scalaCheck = "org.scalacheck" %% "scalacheck"        % versions.scalaCheck
   lazy val scalaTest  = "org.scalatest"  %% "scalatest"         % versions.scalaTest
-  lazy val univocity  = "com.univocity"  %  "univocity-parsers" % versions.univocity
 }

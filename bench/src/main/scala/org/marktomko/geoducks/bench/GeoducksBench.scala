@@ -19,12 +19,12 @@ object GeoducksBench {
     println("IO:")
     args.foreach { arg =>
       val (r, t) = withIO(arg)
-      println(s"${ r / t } reads/ms")
+      println(s"${r / t} reads/ms")
     }
     println("Monix:")
     args.foreach { arg =>
       val (r, t) = withIO(arg)
-      println(s"${ r / t } reads/ms")
+      println(s"${r / t} reads/ms")
     }
 
   }
@@ -41,10 +41,10 @@ object GeoducksBench {
     nanoTimed(io.unsafeRunSync())
   }
 
-  final def countFastqReads[F[_] : Sync](path: Path): F[Int] =
-    fastqStream[F](path).compile.fold(0) { case (x, _) => x + 1 }
+  final def countFastqReads[F[_]: Sync](path: Path): F[Int] =
+    fastq[F](path).compile.fold(0) { case (x, _) => x + 1 }
 
-  final def fastqStream[F[_] : Sync](path: Path): Stream[F, Fastq] =
-    bracketedReader(path).flatMap(format.fastqStream(_))
+  final def fastq[F[_]: Sync](path: Path): Stream[F, Fastq] =
+    bracketedReader(path).flatMap(format.fastq(_))
 
 }

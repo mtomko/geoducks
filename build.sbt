@@ -3,7 +3,7 @@ import libraries._
 lazy val commonSettings = inThisBuild(
   List(
     organization := "org.marktomko",
-    scalaVersion := "2.12.4",
+    scalaVersion := "2.12.5",
     version := "0.0.1-SNAPSHOT"
   ))
 
@@ -22,7 +22,6 @@ lazy val core = project
       catsEffect,
       fs2Core,
       fs2Io,
-      univocity,
       scalaCheck % Test,
       scalaTest  % Test))
 
