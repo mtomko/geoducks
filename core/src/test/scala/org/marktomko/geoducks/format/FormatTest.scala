@@ -61,19 +61,34 @@ class FormatTest extends FlatSpec with Matchers {
       br.close
     }
   }
-  "fasta" should "read a fasta" in {
-    val fa =
-      """> chr1
-        |TTTCCGGGGCACATAATCTTCAGCCGGGCGC
-        |TATCCTTGCAATACTCTCCGAACGGGAGAGC
-      """.stripMargin
-    val ret = fasta(fs2.Stream(fa.toCharArray: _*)).toList
+  "fasta" should "read a fasta with a single sequence" in {
+    val fa = Seq(
+      "> chr1",
+      "TTTCCGGGGCACATAATCTTCAGCCGGGCGC",
+      "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
+    )
+    val ret = fasta(fs2.Stream(fa: _*)).toList
     ret should be (
       List(
         Fasta(
           "chr1",
           "TTTCCGGGGCACATAATCTTCAGCCGGGCGCTATCCTTGCAATACTCTCCGAACGGGAGAGC"
         )
+      )
+    )
+  }
+  it should "read a fasta with two sequences" in {
+    val fa = Seq(
+      "> chr1",
+      "TTTCCGGGGCACATAATCTTCAGCCGGGCGC",
+      "> chr2",
+      "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
+    )
+    val ret = fasta(fs2.Stream(fa: _*)).toList
+    ret should be (
+      List(
+        Fasta("chr1", "TTTCCGGGGCACATAATCTTCAGCCGGGCGC"),
+        Fasta("chr2", "TATCCTTGCAATACTCTCCGAACGGGAGAGC")
       )
     )
   }
