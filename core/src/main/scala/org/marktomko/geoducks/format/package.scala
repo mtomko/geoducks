@@ -1,9 +1,12 @@
 package org.marktomko.geoducks
 
-import fs2.{Pipe, Stream}
 import java.io.BufferedReader
-import org.marktomko.geoducks.domain.Fastq
+
+import fs2.{Pipe, Pull, Stream}
+import org.marktomko.geoducks.domain.{Fasta, Fastq}
 import org.marktomko.geoducks.stream.grouped
+
+import scala.collection.mutable
 
 package object format {
 
@@ -34,5 +37,39 @@ package object format {
         else Some((Fastq(line, seq, qual), reader))
       }
     }
+
+  /** Converts a [[Stream]] of Chars into a Stream of [[Fasta]] records. */
+  final def fasta[F[_]]: Pipe[F, Char, Fasta] = { in =>
+    // handles the initial state (degenerate, possibly subject to removal)
+    def start(s: Stream[F, Char]): Pull[F, Fasta, Unit] =
+      s.pull.uncons1.flatMap {
+        case Some((hd, tl)) if hd == '>' => seqId(tl, new mutable.StringBuilder)
+        case _ => Pull.done
+      }
+
+    // handles reading a sequence ID and then hands off to `seq` to read the sequence data
+    def seqId(s: Stream[F, Char], buf: mutable.StringBuilder): Pull[F, Fasta, Unit] = {
+      s.pull.uncons1.flatMap {
+        case Some((hd, tl)) if hd == '\n' => seq(tl, buf.toString().trim, new mutable.StringBuilder)
+        case Some((hd, tl)) => seqId(tl, buf += hd)
+        case None => Pull.done
+      }
+    }
+
+    // handles reading sequence data and then either finishes up or returns to deal with the next record
+    def seq(s: Stream[F, Char], id: String, buf: mutable.StringBuilder): Pull[F, Fasta, Unit] =
+      s.pull.uncons1.flatMap {
+        case None =>
+          Pull.output1(Fasta(id, buf.toString().trim)) >> Pull.done
+        case Some((hd, tl)) if hd == '>' =>
+          Pull.output1(Fasta(id, buf.toString().trim)) >> seqId(tl, new mutable.StringBuilder)
+        case Some((hd, tl)) if hd == '\n' =>
+          seq(tl, id, buf)
+        case Some((hd, tl)) =>
+          seq(tl, id, buf += hd)
+      }
+
+    start(in).stream
+  }
 
 }
