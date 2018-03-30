@@ -1,8 +1,9 @@
 package org.marktomko.geoducks
 
-import fs2.{Pipe, Stream}
 import java.io.BufferedReader
-import org.marktomko.geoducks.domain.Fastq
+
+import fs2.{Pipe, Pull, Stream}
+import org.marktomko.geoducks.domain.{Fasta, Fastq}
 import org.marktomko.geoducks.stream.grouped
 
 package object format {
@@ -34,5 +35,30 @@ package object format {
         else Some((Fastq(line, seq, qual), reader))
       }
     }
+
+  /** Converts a [[Stream]] of Strings into a Stream of [[Fasta]] records. */
+  final def fasta[F[_]]: Pipe[F, String, Fasta] = { in =>
+    import scala.collection.mutable
+
+    @inline def idOf(s: String): String = s.substring(1).trim
+
+    // handles reading sequence data and then either finishes up or returns to deal with the next record
+    def seq(s: Stream[F, String], id: String, buf: mutable.StringBuilder): Pull[F, Fasta, Unit] =
+      s.pull.uncons1.flatMap {
+        case None =>
+          Pull.output1(Fasta(id, buf.toString().trim)) >> Pull.done
+        case Some((hd, tl)) if hd.startsWith(">") =>
+          Pull.output1(Fasta(id, buf.toString().trim)) >> seq(tl, idOf(hd), new mutable.StringBuilder())
+        case Some((hd, tl)) =>
+          seq(tl, id, buf ++= hd)
+      }
+
+    in.pull.uncons1.flatMap {
+      case Some((hd, tl)) if hd.startsWith(">") =>
+        seq(tl, idOf(hd), new mutable.StringBuilder())
+      case _ =>
+        Pull.done
+    }.stream
+  }
 
 }

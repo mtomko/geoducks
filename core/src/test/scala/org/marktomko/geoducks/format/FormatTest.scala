@@ -2,7 +2,7 @@ package org.marktomko.geoducks.format
 
 import java.io.{BufferedReader, StringReader}
 
-import org.marktomko.geoducks.domain.Fastq
+import org.marktomko.geoducks.domain.{Fasta, Fastq}
 import org.scalatest.{FlatSpec, Matchers}
 
 class FormatTest extends FlatSpec with Matchers {
@@ -60,6 +60,37 @@ class FormatTest extends FlatSpec with Matchers {
     } finally {
       br.close
     }
+  }
+  "fasta" should "read a fasta with a single sequence" in {
+    val fa = Seq(
+      "> chr1",
+      "TTTCCGGGGCACATAATCTTCAGCCGGGCGC",
+      "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
+    )
+    val ret = fasta(fs2.Stream(fa: _*)).toList
+    ret should be (
+      List(
+        Fasta(
+          "chr1",
+          "TTTCCGGGGCACATAATCTTCAGCCGGGCGCTATCCTTGCAATACTCTCCGAACGGGAGAGC"
+        )
+      )
+    )
+  }
+  it should "read a fasta with two sequences" in {
+    val fa = Seq(
+      "> chr1",
+      "TTTCCGGGGCACATAATCTTCAGCCGGGCGC",
+      "> chr2",
+      "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
+    )
+    val ret = fasta(fs2.Stream(fa: _*)).toList
+    ret should be (
+      List(
+        Fasta("chr1", "TTTCCGGGGCACATAATCTTCAGCCGGGCGC"),
+        Fasta("chr2", "TATCCTTGCAATACTCTCCGAACGGGAGAGC")
+      )
+    )
   }
 
 }
