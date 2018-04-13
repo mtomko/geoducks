@@ -2,7 +2,7 @@ package org.marktomko.geoducks.format
 
 import java.io.{BufferedReader, StringReader}
 
-import org.marktomko.geoducks.domain.{Fasta, Fastq}
+import org.marktomko.geoducks.seq.{Fasta, Fastq}
 import org.scalatest.{FlatSpec, Matchers}
 
 class FormatTest extends FlatSpec with Matchers {

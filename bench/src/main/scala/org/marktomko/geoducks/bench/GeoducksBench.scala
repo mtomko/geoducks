@@ -9,7 +9,7 @@ import cats.effect.{IO, Sync}
 import fs2.Stream
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
-import org.marktomko.geoducks.domain.Fastq
+import org.marktomko.geoducks.seq.Fastq
 import org.marktomko.geoducks.format
 import org.marktomko.geoducks.io.bracketedReader
 
