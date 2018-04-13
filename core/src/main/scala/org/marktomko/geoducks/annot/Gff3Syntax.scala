@@ -1,5 +1,6 @@
 package org.marktomko.geoducks.annot
 
+import cats.implicits._
 import org.marktomko.geoducks.util.fastSplit
 
 import scala.collection.mutable
@@ -20,6 +21,8 @@ case class Gff3Feature(
     attributes: Map[String, Seq[String]]) extends Gff3Syntax
 
 case object ReferencesResolved extends Gff3Pragma
+
+case class Comment(msg: String) extends Gff3Pragma
 
 object Gff3Feature {
 
@@ -57,6 +60,20 @@ object Gff3Feature {
       }
     }
     m.map { case (k, v) => k -> v.result }.toMap
+  }
+
+}
+
+object Gff3Syntax {
+
+  def fromString(s: String): Either[Throwable, Gff3Syntax] = {
+    val e =
+      if (s == "###") Right(ReferencesResolved)
+      else if (s.startsWith("#")) Right(Comment(s.substring(1)))
+      else Either.catchNonFatal(Gff3Feature(s.split('\t')))
+    e.leftMap { t =>
+      new Exception(s"Unable to parse `$s`", t)
+    }
   }
 
 }

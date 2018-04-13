@@ -1,12 +1,13 @@
 package org.marktomko.geoducks
 
 import java.io.BufferedReader
+import java.nio.file.Path
 
+import cats.ApplicativeError
 import cats.effect.Sync
-import fs2.{Pipe, Pull, Pure, Stream}
-import org.marktomko.geoducks.annot.{Gff3Feature, Gff3Syntax, ReferencesResolved}
+import fs2.{Pipe, Pull, Stream, text}
+import org.marktomko.geoducks.annot.{Gff3Feature, Gff3Syntax}
 import org.marktomko.geoducks.seq.{Fasta, Fastq}
-import org.marktomko.geoducks.stream.grouped
 import org.marktomko.geoducks.util.fastSplit
 
 package object format {
@@ -15,29 +16,13 @@ package object format {
     * records. This method uses groupd and is much slower than the variant below.
     */
   final def fastq[F[_]]: Pipe[F, String, Fastq] = { in =>
-    grouped(4)(in).map {
-      case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
-      case _                             => throw new AssertionError("bug")
-    }
-  }
-
-  /** Converts a [[BufferedReader]] into a [[Stream]] of [[Fastq]] records.
-    *
-    * This method assumes that it will be called within the context of [[Stream#bracket]] and does
-    * no resource management.
-    */
-  final def fastq(reader: BufferedReader): Stream[Pure, Fastq] =
-    Stream.unfold(reader) { r =>
-      val line = reader.readLine()
-      if (line == null) None
-      else {
-        val seq  = reader.readLine()
-        val _    = reader.readLine()
-        val qual = reader.readLine()
-        if (qual == null) None
-        else Some((Fastq(line, seq, qual), reader))
+    in.segmentN(4, false).map { seg =>
+      seg.force.toList match {
+        case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
+        case _                             => throw new AssertionError("bug")
       }
     }
+  }
 
   /** Converts a [[Stream]] of Strings into a Stream of [[Fasta]] records. */
   final def fasta[F[_]]: Pipe[F, String, Fasta] = { in =>
@@ -64,24 +49,6 @@ package object format {
     }.stream
   }
 
-  final def gff3[F[_]]: Pipe[F, String, Gff3Syntax] = { in =>
-    val arr = Array.ofDim[String](9)
-    def go(s: Stream[F, String]): Pull[F, Gff3Syntax, Unit] = {
-      s.pull.uncons1.flatMap {
-        case Some(("###", tl)) =>
-          Pull.output1(ReferencesResolved) >> go(tl)
-        case Some((hd, tl)) =>
-          val fields = fastSplit(hd, '\t', arr)
-          if (fields != arr.length) throw new IllegalArgumentException("Incorrect number of fields")
-          else Pull.output1(Gff3Feature(arr)) >> go(tl)
-        case _ =>
-          Pull.done
-      }
-    }
-
-    go(in).stream
-  }
-
   def readerToStream[F[_]: Sync](reader: BufferedReader): Stream[F, String] = {
     Stream.unfoldEval(reader) { r =>
       val fl = Sync[F].delay(r.readLine())
@@ -91,22 +58,24 @@ package object format {
     }
   }
 
-  final def gff3[F[_] : Sync](reader: BufferedReader): Stream[F, Gff3Syntax] = {
+  final def gff3[F[_]: Sync](reader: BufferedReader): Stream[F, Gff3Syntax] = {
     val arr = Array.ofDim[String](9)
-    Stream.unfoldEval(reader) { r =>
-      Sync[F].flatMap(Sync[F].delay(r.readLine())) { line =>
-        val x: F[Option[(Gff3Syntax, BufferedReader)]] =
-          if (line == null) Sync[F].pure(None)
-          else {
-            val fields = fastSplit(line, '\t', arr)
-            if (fields != arr.length) Sync[F].raiseError(new Exception("doh"))
-            else {
-              Sync[F].delay(Some((Gff3Feature(arr) : Gff3Syntax, reader)))
-            }
-          }
-        x
-      }
+    readerToStream(reader: BufferedReader).flatMap { line =>
+      val fields = fastSplit(line, '\t', arr)
+      if (fields != arr.length) Stream.raiseError(new Exception("doh"))
+      else Stream(Gff3Feature(arr))
     }
+  }
+
+  def gff3[F[_]](s: String)(implicit ae: ApplicativeError[F, Throwable]): F[Gff3Syntax] =
+    ae.fromEither(Gff3Syntax.fromString(s))
+
+  def gff3[F[_] : Sync](p: Path): Stream[F, Gff3Syntax] = {
+    fs2.io.file
+      .readAll[F](p, 4096)
+      .through(text.utf8Decode)
+      .through(text.lines)
+      .evalMap(gff3[F])
   }
 
 }
