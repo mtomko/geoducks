@@ -1,14 +1,12 @@
 package org.marktomko.geoducks
 
-import java.io.BufferedReader
 import java.nio.file.Path
 
 import cats.ApplicativeError
 import cats.effect.Sync
 import fs2.{Pipe, Pull, Stream, text}
-import org.marktomko.geoducks.annot.{Gff3Feature, Gff3Syntax}
+import org.marktomko.geoducks.annot.Gff3Syntax
 import org.marktomko.geoducks.seq.{Fasta, Fastq}
-import org.marktomko.geoducks.util.fastSplit
 
 package object format {
 
@@ -47,24 +45,6 @@ package object format {
       case _ =>
         Pull.done
     }.stream
-  }
-
-  def readerToStream[F[_]: Sync](reader: BufferedReader): Stream[F, String] = {
-    Stream.unfoldEval(reader) { r =>
-      val fl = Sync[F].delay(r.readLine())
-      Sync[F].map(fl) { line =>
-        Option(line).map(l => (l, r))
-      }
-    }
-  }
-
-  final def gff3[F[_]: Sync](reader: BufferedReader): Stream[F, Gff3Syntax] = {
-    val arr = Array.ofDim[String](9)
-    readerToStream(reader: BufferedReader).flatMap { line =>
-      val fields = fastSplit(line, '\t', arr)
-      if (fields != arr.length) Stream.raiseError(new Exception("doh"))
-      else Stream(Gff3Feature(arr))
-    }
   }
 
   def gff3[F[_]](s: String)(implicit ae: ApplicativeError[F, Throwable]): F[Gff3Syntax] =

@@ -66,7 +66,7 @@ object Gff3Feature {
 
 object Gff3Syntax {
 
-  def fromString(s: String): Either[Throwable, Gff3Syntax] = {
+  def fromString(s: String): Either[Exception, Gff3Syntax] = {
     val e =
       if (s == "###") Right(ReferencesResolved)
       else if (s.startsWith("#")) Right(Comment(s.substring(1)))
