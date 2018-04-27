@@ -1,10 +1,12 @@
 package org.marktomko.geoducks
 
-import java.io.BufferedReader
+import java.nio.file.Path
 
-import fs2.{Pipe, Pull, Stream}
-import org.marktomko.geoducks.domain.{Fasta, Fastq}
-import org.marktomko.geoducks.stream.grouped
+import cats.ApplicativeError
+import cats.effect.Sync
+import fs2.{Pipe, Pull, Stream, text}
+import org.marktomko.geoducks.annot.Gff3Syntax
+import org.marktomko.geoducks.seq.{Fasta, Fastq}
 
 package object format {
 
@@ -12,29 +14,13 @@ package object format {
     * records. This method uses groupd and is much slower than the variant below.
     */
   final def fastq[F[_]]: Pipe[F, String, Fastq] = { in =>
-    grouped(4)(in).map {
-      case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
-      case _                             => throw new AssertionError("bug")
-    }
-  }
-
-  /** Converts a [[BufferedReader]] into a [[Stream]] of [[Fastq]] records.
-    *
-    * This method assumes that it will be called within the context of [[Stream#bracket]] and does
-    * no resource management.
-    */
-  final def fastq(reader: BufferedReader) =
-    Stream.unfold(reader) { r =>
-      val line = reader.readLine()
-      if (line == null) None
-      else {
-        val seq  = reader.readLine()
-        val _    = reader.readLine()
-        val qual = reader.readLine()
-        if (qual == null) None
-        else Some((Fastq(line, seq, qual), reader))
+    in.segmentN(4, false).map { seg =>
+      seg.force.toList match {
+        case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
+        case _                             => throw new AssertionError("bug")
       }
     }
+  }
 
   /** Converts a [[Stream]] of Strings into a Stream of [[Fasta]] records. */
   final def fasta[F[_]]: Pipe[F, String, Fasta] = { in =>
@@ -59,6 +45,17 @@ package object format {
       case _ =>
         Pull.done
     }.stream
+  }
+
+  def gff3[F[_]](s: String)(implicit ae: ApplicativeError[F, Throwable]): F[Gff3Syntax] =
+    ae.fromEither(Gff3Syntax.fromString(s))
+
+  def gff3[F[_] : Sync](p: Path): Stream[F, Gff3Syntax] = {
+    fs2.io.file
+      .readAll[F](p, 4096)
+      .through(text.utf8Decode)
+      .through(text.lines)
+      .evalMap(gff3[F])
   }
 
 }

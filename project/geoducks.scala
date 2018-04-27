@@ -3,10 +3,10 @@ import sbt._
 object versions {
 
   val cats       = "1.1.0"
-  val catsEffect = "0.10"
-  val fs2        = "0.10.3"
+  val catsEffect = "0.10.1"
+  val fs2        = "0.10.4"
   val monix      = "3.0.0-M3"
-  val scalaCheck = "1.13.5"
+  val scalaCheck = "1.14.0"
   val scalaTest  = "3.0.5"
 
 }
