@@ -3,7 +3,7 @@ import libraries._
 lazy val commonSettings = inThisBuild(
   List(
     organization := "org.marktomko",
-    scalaVersion := "2.12.5",
+    scalaVersion := "2.12.6",
     version := "0.0.1-SNAPSHOT"
   ))
 
