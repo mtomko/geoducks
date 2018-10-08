@@ -8,9 +8,9 @@ package object stream {
     require(n > 0, s"$n must be > 0")
 
     def go(s: Stream[F, O]): Pull[F, List[O], Unit] =
-      s.pull.unconsN(n.toLong).flatMap {
+      s.pull.unconsN(n).flatMap {
         case None => Pull.done
-        case Some((hd, tl)) => Pull.output1(hd.force.toList) >> go(tl)
+        case Some((hd, tl)) => Pull.output1(hd.toList) >> go(tl)
       }
 
     go(in).stream
