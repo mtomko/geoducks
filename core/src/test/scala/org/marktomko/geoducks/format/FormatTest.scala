@@ -1,5 +1,6 @@
 package org.marktomko.geoducks.format
 
+import fs2.Pure
 import org.marktomko.geoducks.seq.{Fasta, Fastq}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -54,7 +55,7 @@ class FormatTest extends FlatSpec with Matchers {
       "TTTCCGGGGCACATAATCTTCAGCCGGGCGC",
       "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
     )
-    val ret = fasta(fs2.Stream(fa: _*)).toList
+    val ret = fasta(fs2.Stream.emits(fa)).toList
     ret should be (
       List(
         Fasta(
@@ -71,7 +72,26 @@ class FormatTest extends FlatSpec with Matchers {
       "> chr2",
       "TATCCTTGCAATACTCTCCGAACGGGAGAGC"
     )
-    val ret = fasta(fs2.Stream(fa: _*)).toList
+    val ret = fasta(fs2.Stream.emits(fa)).toList
+    ret should be (
+      List(
+        Fasta("chr1", "TTTCCGGGGCACATAATCTTCAGCCGGGCGC"),
+        Fasta("chr2", "TATCCTTGCAATACTCTCCGAACGGGAGAGC")
+      )
+    )
+  }
+
+  "sfasta" should "read a fasta with two sequences" in {
+    val fa = Seq(
+      "> chr1",
+      "TTTCCGGGGCACATAA\nTCTTCAGCCGGGCGC",
+      "> chr2",
+      "TATCCTTGCAATACTC\nTCCGAACGGGAGAGC"
+    )
+    val fs: fs2.Stream[Pure, Char] = fs2.Stream.emits(fa.mkString("\n").toSeq)
+    val ret: List[Fasta] = sfasta(fs).map { case (id, s) =>
+      Fasta(id, s.toVector.mkString(""))
+    }.toList
     ret should be (
       List(
         Fasta("chr1", "TTTCCGGGGCACATAATCTTCAGCCGGGCGC"),
