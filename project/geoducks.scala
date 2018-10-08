@@ -2,9 +2,9 @@ import sbt._
 
 object versions {
 
-  val cats       = "1.1.0"
-  val catsEffect = "0.10.1"
-  val fs2        = "0.10.5"
+  val cats       = "1.4.0"
+  val catsEffect = "1.0.0"
+  val fs2        = "1.0.0"
   val monix      = "3.0.0-RC1"
   val scalaCheck = "1.14.0"
   val scalaTest  = "3.0.5"

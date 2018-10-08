@@ -2,11 +2,13 @@ package org.marktomko.geoducks
 
 import java.nio.file.Path
 
-import cats.effect.Sync
+import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import fs2.{text, Pipe, Pull, Stream}
+import fs2.{Pipe, Pull, Stream, text}
 import org.marktomko.geoducks.annot.Gff3Syntax
 import org.marktomko.geoducks.seq.{Fasta, Fastq}
+
+import scala.concurrent.ExecutionContext
 
 package object format {
 
@@ -14,8 +16,8 @@ package object format {
     * records.
     */
   final def fastq[F[_]]: Pipe[F, String, Fastq] = { in =>
-    in.segmentN(4, false).map { seg =>
-      seg.force.toList match {
+    in.chunkN(4, false).map { seg =>
+      seg.toList match {
         case id :: seq :: _ :: qual :: Nil => Fastq(id, seq, qual)
         case _                             => throw new AssertionError("bug")
       }
@@ -74,9 +76,9 @@ package object format {
   def gff3[F[_]](s: String)(implicit S: Sync[F]): F[Gff3Syntax] =
     S.fromEither(Gff3Syntax.fromString(s))
 
-  def gff3[F[_]: Sync](p: Path): Stream[F, Gff3Syntax] =
+  def gff3[F[_]: Sync: ContextShift](p: Path, blockingExecutionContext: ExecutionContext): Stream[F, Gff3Syntax] =
     fs2.io.file
-      .readAll[F](p, 4096)
+      .readAll[F](p, blockingExecutionContext, 4096)
       .through(text.utf8Decode)
       .through(text.lines)
       .evalMap(gff3[F])
