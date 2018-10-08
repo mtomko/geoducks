@@ -18,9 +18,12 @@ case class Gff3Feature(
     score: Option[Float],
     strand: Either[Unit, Option[Strand]],
     phase: Option[Phase],
-    attributes: Map[String, Seq[String]]) extends Gff3Syntax
+    attributes: Map[String, Seq[String]])
+  extends Gff3Syntax
 
 case object ReferencesResolved extends Gff3Pragma
+
+case class GenericPragma(text: String) extends Gff3Pragma
 
 case class Comment(msg: String) extends Gff3Pragma
 
@@ -47,16 +50,16 @@ object Gff3Feature {
     s match {
       case "?" => Right(None)
       case "." => Left(())
-      case _ => Right(Strand.fromChar(s.head))
+      case _   => Right(Strand.fromChar(s.head))
     }
 
   @inline private[this] def attributes(s: String): Map[String, Seq[String]] = {
     val pairs = fastSplit(s, ';')
-    val m = mutable.HashMap[String, mutable.Builder[String, List[String]]]()
+    val m     = mutable.HashMap[String, mutable.Builder[String, List[String]]]()
     pairs.foreach {
       fastSplit(_, '=') match {
         case k :: v :: Nil => m.getOrElseUpdate(k, List.newBuilder[String]) += v
-        case _ => // do nothing, or throw
+        case _             => // do nothing, or throw
       }
     }
     m.map { case (k, v) => k -> v.result }.toMap
@@ -69,11 +72,11 @@ object Gff3Syntax {
   def fromString(s: String): Either[Exception, Gff3Syntax] = {
     val e =
       if (s == "###") Right(ReferencesResolved)
-      else if (s.startsWith("#")) Right(Comment(s.substring(1)))
+      else if (s.startsWith("##")) Right(GenericPragma(s.substring(2).trim))
+      else if (s.startsWith("#")) Right(Comment(s.substring(1).trim))
       else Either.catchNonFatal(Gff3Feature(s.split('\t')))
-    e.leftMap { t =>
-      new Exception(s"Unable to parse `$s`", t)
-    }
+
+    e.leftMap(t => new Exception(s"Unable to parse `$s`", t))
   }
 
 }

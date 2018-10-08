@@ -18,12 +18,12 @@ object GeoducksBench {
     println("IO:")
     args.foreach { arg =>
       val (r, t) = withIO(arg)
-      println(s"${r / t} reads/ms")
+      println(s"${r / t} records/ms")
     }
     println("Monix:")
     args.foreach { arg =>
       val (r, t) = withIO(arg)
-      println(s"${r / t} reads/ms")
+      println(s"${r / t} records/ms")
     }
 
   }
@@ -45,12 +45,12 @@ object GeoducksBench {
 
   final def countGff3Features[F[_]: Sync](path: Path): F[Int] =
     io.file
-    .readAll(path, 4096)
+    .readAll(path, 8192)
     .through(text.utf8Decode)
     .through(text.lines)
     .filter(_.nonEmpty)
     .evalMap(format.gff3[F])
-    .compile.fold(0) { case (x, _) => x + 1}
+    .compile.fold(0) { case (x, _) => x + 1 }
 
   final def fastq[F[_]: Sync](path: Path): Stream[F, Fastq] =
     io.file

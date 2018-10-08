@@ -2,7 +2,6 @@ package org.marktomko.geoducks
 
 import java.nio.file.Path
 
-import cats.ApplicativeError
 import cats.effect.Sync
 import fs2.{Pipe, Pull, Stream, text}
 import org.marktomko.geoducks.annot.Gff3Syntax
@@ -34,7 +33,8 @@ package object format {
         case None =>
           Pull.output1(Fasta(id, buf.toString().trim)) >> Pull.done
         case Some((hd, tl)) if hd.startsWith(">") =>
-          Pull.output1(Fasta(id, buf.toString().trim)) >> seq(tl, idOf(hd), new mutable.StringBuilder())
+          Pull.output1(Fasta(id, buf.toString().trim)) >>
+            seq(tl, idOf(hd), new mutable.StringBuilder())
         case Some((hd, tl)) =>
           seq(tl, id, buf ++= hd)
       }
@@ -47,15 +47,14 @@ package object format {
     }.stream
   }
 
-  def gff3[F[_]](s: String)(implicit ae: ApplicativeError[F, Throwable]): F[Gff3Syntax] =
-    ae.fromEither(Gff3Syntax.fromString(s))
+  def gff3[F[_]](s: String)(implicit S: Sync[F]): F[Gff3Syntax] =
+    S.fromEither(Gff3Syntax.fromString(s))
 
-  def gff3[F[_] : Sync](p: Path): Stream[F, Gff3Syntax] = {
+  def gff3[F[_]: Sync](p: Path): Stream[F, Gff3Syntax] =
     fs2.io.file
       .readAll[F](p, 4096)
       .through(text.utf8Decode)
       .through(text.lines)
       .evalMap(gff3[F])
-  }
 
 }
